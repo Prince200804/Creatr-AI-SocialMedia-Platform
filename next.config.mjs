@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/favicon.ico",
+        destination: "/logo.png",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
