@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export default function middleware() {
   return NextResponse.next();
 }
-export const runtime = 'nodejs';
+
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
