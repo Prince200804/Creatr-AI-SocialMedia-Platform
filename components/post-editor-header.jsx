@@ -17,6 +17,7 @@ import {
   Settings,
   Loader2,
 } from "lucide-react";
+import AIToolsPanel from "./ai-tools-panel";
 
 export default function PostEditorHeader({
   mode,
@@ -27,6 +28,9 @@ export default function PostEditorHeader({
   onSchedule,
   onSettingsOpen,
   onBack,
+  title,
+  content,
+  onTitleSelect,
 }) {
   const [isPublishMenuOpen, setIsPublishMenuOpen] = useState(false);
 
@@ -34,7 +38,7 @@ export default function PostEditorHeader({
   const isEdit = mode === "edit";
 
   return (
-    <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+    <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 z-50">
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Left */}
         <div className="flex items-center space-x-4">
@@ -60,6 +64,13 @@ export default function PostEditorHeader({
 
         {/* Right */}
         <div className="flex items-center space-x-3">
+          {/* AI Tools Panel */}
+          <AIToolsPanel
+            title={title}
+            content={content}
+            onTitleSelect={onTitleSelect}
+          />
+
           <Button
             variant="ghost"
             size="sm"

@@ -14,6 +14,9 @@ import {
   Trash2,
   ExternalLink,
   Copy,
+  Bookmark,
+  BookmarkCheck,
+  Clock,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,16 +28,47 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { api } from "@/convex/_generated/api";
+import { useConvexQuery, useConvexMutation } from "@/hooks/use-convex-query";
+import { useUser } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 const PostCard = ({
   post,
   showActions = false,
   showAuthor = true,
+  showBookmark = true,
   onEdit,
   onDelete,
   onDuplicate,
   className = "",
 }) => {
+  const { user: currentUser } = useUser();
+
+  // Bookmark functionality
+  const { data: isBookmarked } = useConvexQuery(
+    api.bookmarks.hasBookmarked,
+    currentUser && post._id ? { postId: post._id } : "skip"
+  );
+  const toggleBookmark = useConvexMutation(api.bookmarks.toggleBookmark);
+
+  const handleBookmarkToggle = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      toast.error("Please sign in to bookmark posts");
+      return;
+    }
+
+    try {
+      const result = await toggleBookmark.mutate({ postId: post._id });
+      toast.success(result.bookmarked ? "Post saved!" : "Bookmark removed");
+    } catch (error) {
+      toast.error("Failed to update bookmark");
+    }
+  };
+
   // Get status badge configuration
   const getStatusBadge = (post) => {
     if (post.status === "published") {
@@ -237,15 +271,36 @@ const PostCard = ({
                 <MessageCircle className="h-4 w-4" />0
               </div>
             </div>
-            <time>
-              {post.status === "published" && post.publishedAt
-                ? formatDistanceToNow(new Date(post.publishedAt), {
-                    addSuffix: true,
-                  })
-                : formatDistanceToNow(new Date(post.updatedAt), {
-                    addSuffix: true,
-                  })}
-            </time>
+            <div className="flex items-center gap-2">
+              {/* Bookmark Button */}
+              {showBookmark && post.status === "published" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBookmarkToggle}
+                  className={`p-1 h-auto ${
+                    isBookmarked
+                      ? "text-purple-400 hover:text-purple-300"
+                      : "text-slate-400 hover:text-purple-400"
+                  }`}
+                >
+                  {isBookmarked ? (
+                    <BookmarkCheck className="h-4 w-4 fill-current" />
+                  ) : (
+                    <Bookmark className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              <time>
+                {post.status === "published" && post.publishedAt
+                  ? formatDistanceToNow(new Date(post.publishedAt), {
+                      addSuffix: true,
+                    })
+                  : formatDistanceToNow(new Date(post.updatedAt), {
+                      addSuffix: true,
+                    })}
+              </time>
+            </div>
           </div>
         </div>
       </CardContent>

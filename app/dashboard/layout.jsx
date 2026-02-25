@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Settings,
+  Bookmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,11 @@ const sidebarItems = [
     title: "My Posts",
     href: "/dashboard/posts",
     icon: FileText,
+  },
+  {
+    title: "Saved Posts",
+    href: "/dashboard/bookmarks",
+    icon: Bookmark,
   },
   {
     title: "Followers",

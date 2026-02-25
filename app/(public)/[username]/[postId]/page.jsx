@@ -16,6 +16,12 @@ import {
   MessageCircle,
   Send,
   Trash2,
+  Bookmark,
+  BookmarkCheck,
+  Share2,
+  Twitter,
+  Linkedin,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +29,9 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { BarLoader } from "react-spinners";
+import TableOfContents from "@/components/table-of-contents";
+import ReadingStats from "@/components/reading-stats";
+import ReadingProgressBar from "@/components/reading-progress-bar";
 
 const PostPage = ({ params }) => {
   const { username, postId } = React.use(params);
@@ -61,6 +70,13 @@ const PostPage = ({ params }) => {
 
   const incrementView = useConvexMutation(api.public.incrementViewCount);
 
+  // Bookmark functionality
+  const { data: isBookmarked } = useConvexQuery(
+    api.bookmarks.hasBookmarked,
+    currentUser ? { postId } : "skip"
+  );
+  const toggleBookmark = useConvexMutation(api.bookmarks.toggleBookmark);
+
   // Track view when post loads
   useEffect(() => {
     if (post && !postLoading) {
@@ -93,6 +109,44 @@ const PostPage = ({ params }) => {
       await toggleLike.mutate({ postId });
     } catch (error) {
       toast.error("Failed to update like");
+    }
+  };
+
+  const handleBookmarkToggle = async () => {
+    if (!currentUser) {
+      toast.error("Please sign in to bookmark posts");
+      return;
+    }
+
+    try {
+      const result = await toggleBookmark.mutate({ postId });
+      toast.success(result.bookmarked ? "Post saved!" : "Bookmark removed");
+    } catch (error) {
+      toast.error("Failed to update bookmark");
+    }
+  };
+
+  const handleShare = (platform) => {
+    const url = window.location.href;
+    const title = post?.title || "";
+
+    switch (platform) {
+      case "twitter":
+        window.open(
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+          "_blank"
+        );
+        break;
+      case "linkedin":
+        window.open(
+          `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+          "_blank"
+        );
+        break;
+      case "copy":
+        navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard!");
+        break;
     }
   };
 
@@ -132,6 +186,7 @@ const PostPage = ({ params }) => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
+      <ReadingProgressBar />
       <PublicHeader link={`/${username}`} title="Back to Profile" />
 
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -214,7 +269,13 @@ const PostPage = ({ params }) => {
                 ))}
               </div>
             )}
+
+            {/* Reading Stats */}
+            <ReadingStats content={post.content} showDetailed={true} />
           </div>
+
+          {/* Table of Contents */}
+          <TableOfContents content={post.content} className="mb-8" />
 
           {/* Post Content */}
           <div
@@ -222,24 +283,73 @@ const PostPage = ({ params }) => {
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
 
-          <div className="flex items-center gap-6 pt-4 border-t border-slate-800">
-            <Button
-              onClick={handleLikeToggle}
-              variant="ghost"
-              className={`flex items-center gap-2 ${
-                hasLiked
-                  ? "text-red-400 hover:text-red-300"
-                  : "text-slate-400 hover:text-white"
-              }`}
-              disabled={toggleLike.isLoading}
-            >
-              <Heart className={`h-5 w-5 ${hasLiked ? "fill-current" : ""}`} />
-              {post.likeCount.toLocaleString()}
-            </Button>
+          {/* Action Bar */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleLikeToggle}
+                variant="ghost"
+                className={`flex items-center gap-2 ${
+                  hasLiked
+                    ? "text-red-400 hover:text-red-300"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                disabled={toggleLike.isLoading}
+              >
+                <Heart className={`h-5 w-5 ${hasLiked ? "fill-current" : ""}`} />
+                {post.likeCount.toLocaleString()}
+              </Button>
 
-            <div className="flex items-center gap-2 text-slate-400">
-              <MessageCircle className="h-5 w-5" />
-              {comments?.length || 0} comments
+              <Button
+                onClick={handleBookmarkToggle}
+                variant="ghost"
+                className={`flex items-center gap-2 ${
+                  isBookmarked
+                    ? "text-purple-400 hover:text-purple-300"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {isBookmarked ? (
+                  <BookmarkCheck className="h-5 w-5 fill-current" />
+                ) : (
+                  <Bookmark className="h-5 w-5" />
+                )}
+                Save
+              </Button>
+
+              <div className="flex items-center gap-2 text-slate-400">
+                <MessageCircle className="h-5 w-5" />
+                {comments?.length || 0}
+              </div>
+            </div>
+
+            {/* Share Buttons */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-400 mr-2">Share:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleShare("twitter")}
+                className="text-slate-400 hover:text-blue-400"
+              >
+                <Twitter className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleShare("linkedin")}
+                className="text-slate-400 hover:text-blue-500"
+              >
+                <Linkedin className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleShare("copy")}
+                className="text-slate-400 hover:text-purple-400"
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </article>

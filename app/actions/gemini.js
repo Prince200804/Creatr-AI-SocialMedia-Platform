@@ -10,7 +10,7 @@ export async function generateBlogContent(title, category = "", tags = []) {
       throw new Error("Title is required to generate content");
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Create a detailed prompt for blog content generation
     const prompt = `
@@ -83,7 +83,7 @@ export async function improveContent(
       throw new Error("Content is required for improvement");
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     let prompt = "";
 
@@ -147,6 +147,281 @@ Requirements:
     return {
       success: false,
       error: error.message || "Failed to improve content. Please try again.",
+    };
+  }
+}
+
+// ============================================
+// NEW AI FEATURES FOR RESUME STANDOUT
+// ============================================
+
+/**
+ * AI SEO Optimizer - Generate meta description, keywords, and social preview
+ */
+export async function generateSeoMetadata(title, content) {
+  try {
+    if (!title || !content) {
+      throw new Error("Title and content are required for SEO optimization");
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `
+Analyze this blog post and generate SEO metadata:
+
+Title: "${title}"
+Content: ${content.substring(0, 3000)}
+
+Generate the following in JSON format (return ONLY valid JSON, no markdown):
+{
+  "metaDescription": "A compelling 150-160 character meta description for search engines",
+  "keywords": ["array", "of", "5-8", "relevant", "seo", "keywords"],
+  "socialPreviewText": "An engaging 200-250 character preview for social media sharing",
+  "suggestedSlug": "url-friendly-slug-for-the-post"
+}
+
+Requirements:
+- Meta description should be compelling and include primary keyword
+- Keywords should be relevant and searchable terms
+- Social preview should be engaging and shareable
+- All text should be natural and not keyword-stuffed
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Parse JSON from response (handle potential markdown code blocks)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Failed to parse SEO metadata");
+    }
+    
+    const seoData = JSON.parse(jsonMatch[0]);
+
+    return {
+      success: true,
+      data: seoData,
+    };
+  } catch (error) {
+    console.error("SEO generation error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to generate SEO metadata.",
+    };
+  }
+}
+
+/**
+ * AI Title Generator - Generate multiple catchy title variations
+ */
+export async function generateTitleVariations(currentTitle, content = "") {
+  try {
+    if (!currentTitle) {
+      throw new Error("Current title is required");
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `
+Generate 5 alternative catchy titles for this blog post:
+
+Current Title: "${currentTitle}"
+${content ? `Content Preview: ${content.substring(0, 1000)}` : ""}
+
+Requirements:
+- Each title should be unique and engaging
+- Mix different styles: question-based, how-to, numbered lists, intriguing statements
+- Keep titles under 60 characters for SEO
+- Make them click-worthy but not clickbait
+- Return ONLY a JSON array of strings, no markdown
+
+Example format: ["Title 1", "Title 2", "Title 3", "Title 4", "Title 5"]
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Parse JSON array from response
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error("Failed to parse title variations");
+    }
+    
+    const titles = JSON.parse(jsonMatch[0]);
+
+    return {
+      success: true,
+      titles: titles,
+    };
+  } catch (error) {
+    console.error("Title generation error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to generate titles.",
+    };
+  }
+}
+
+/**
+ * Calculate reading time and readability score
+ */
+export async function analyzeContentReadability(content) {
+  try {
+    if (!content) {
+      throw new Error("Content is required for analysis");
+    }
+
+    // Strip HTML tags for text analysis
+    const textContent = content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    const words = textContent.split(/\s+/).filter(word => word.length > 0);
+    const wordCount = words.length;
+    const sentences = textContent.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const sentenceCount = sentences.length || 1;
+    
+    // Calculate reading time (average 200 words per minute)
+    const readingTime = Math.ceil(wordCount / 200);
+    
+    // Calculate average sentence length
+    const avgSentenceLength = wordCount / sentenceCount;
+    
+    // Calculate average word length
+    const avgWordLength = words.join("").length / wordCount;
+    
+    // Simple Flesch-Kincaid-like readability score
+    // Higher score = easier to read (0-100 scale)
+    let readabilityScore = 100 - (avgSentenceLength * 1.5) - (avgWordLength * 10);
+    readabilityScore = Math.max(0, Math.min(100, Math.round(readabilityScore)));
+    
+    // Determine readability level
+    let readabilityLevel;
+    if (readabilityScore >= 70) {
+      readabilityLevel = "Easy";
+    } else if (readabilityScore >= 50) {
+      readabilityLevel = "Medium";
+    } else {
+      readabilityLevel = "Advanced";
+    }
+
+    return {
+      success: true,
+      data: {
+        wordCount,
+        readingTime,
+        readabilityScore,
+        readabilityLevel,
+        avgSentenceLength: Math.round(avgSentenceLength * 10) / 10,
+        sentenceCount,
+      },
+    };
+  } catch (error) {
+    console.error("Readability analysis error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to analyze content.",
+    };
+  }
+}
+
+/**
+ * Extract Table of Contents from HTML content
+ */
+export async function extractTableOfContents(htmlContent) {
+  try {
+    if (!htmlContent) {
+      return { success: true, toc: [] };
+    }
+
+    const headingRegex = /<h([1-3])[^>]*>(.*?)<\/h[1-3]>/gi;
+    const toc = [];
+    let match;
+    let index = 0;
+
+    while ((match = headingRegex.exec(htmlContent)) !== null) {
+      const level = parseInt(match[1]);
+      const text = match[2].replace(/<[^>]*>/g, "").trim(); // Strip inner HTML tags
+      
+      if (text) {
+        toc.push({
+          id: `heading-${index}`,
+          text: text,
+          level: level,
+        });
+        index++;
+      }
+    }
+
+    return {
+      success: true,
+      toc: toc,
+    };
+  } catch (error) {
+    console.error("TOC extraction error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to extract table of contents.",
+    };
+  }
+}
+
+/**
+ * AI Content Performance Insights - Analyze why content might perform well/poorly
+ */
+export async function generateContentInsights(title, content, metrics = {}) {
+  try {
+    if (!title || !content) {
+      throw new Error("Title and content are required for insights");
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `
+Analyze this blog post and provide performance insights:
+
+Title: "${title}"
+Content: ${content.substring(0, 2000)}
+${metrics.views ? `Current Views: ${metrics.views}` : ""}
+${metrics.likes ? `Current Likes: ${metrics.likes}` : ""}
+
+Provide actionable insights in JSON format (return ONLY valid JSON, no markdown):
+{
+  "overallScore": 85,
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "improvements": ["improvement suggestion 1", "improvement suggestion 2"],
+  "engagementTips": ["tip 1", "tip 2"],
+  "seoSuggestions": ["seo tip 1", "seo tip 2"],
+  "viralPotential": "Medium",
+  "bestPublishTime": "Tuesday 10 AM EST"
+}
+
+Requirements:
+- overallScore should be 0-100 based on content quality
+- Provide 2-4 items for each array
+- Be specific and actionable
+- viralPotential should be "Low", "Medium", or "High"
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Failed to parse insights");
+    }
+    
+    const insights = JSON.parse(jsonMatch[0]);
+
+    return {
+      success: true,
+      insights: insights,
+    };
+  } catch (error) {
+    console.error("Content insights error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to generate insights.",
     };
   }
 }

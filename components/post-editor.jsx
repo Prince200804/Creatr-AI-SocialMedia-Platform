@@ -152,6 +152,11 @@ export default function PostEditor({
     handleSubmit((data) => onSubmit(data, "schedule"))();
   };
 
+  const handleTitleSelect = (newTitle) => {
+    setValue("title", newTitle);
+    toast.success("Title updated!");
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <PostEditorHeader
@@ -163,6 +168,9 @@ export default function PostEditor({
         onSchedule={handleSchedule}
         onSettingsOpen={() => setIsSettingsOpen(true)}
         onBack={() => router.push("/dashboard")}
+        title={watchedValues.title}
+        content={watchedValues.content}
+        onTitleSelect={handleTitleSelect}
       />
 
       <PostEditorContent

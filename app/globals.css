@@ -138,3 +138,31 @@ html {
 .card-glass {
   @apply bg-gray-900/50 border-gray-800 hover:border-purple-500/50;
 }
+
+/* TOC Heading Highlight Animation */
+.highlight-heading {
+  animation: headingHighlight 2s ease-out;
+  border-radius: 4px;
+}
+
+@keyframes headingHighlight {
+  0% {
+    background-color: rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Reading Progress Bar */
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(to right, #a855f7, #3b82f6);
+  z-index: 9999;
+  transition: width 0.1s ease-out;
+}

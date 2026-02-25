@@ -105,4 +105,34 @@ export default defineSchema({
     .index("by_post", ["postId"])
     .index("by_date", ["date"])
     .index("by_post_date", ["postId", "date"]), // Unique constraint
+
+  // Bookmarks system - Save posts for later
+  bookmarks: defineTable({
+    userId: v.id("users"),
+    postId: v.id("posts"),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_post", ["postId"])
+    .index("by_user_post", ["userId", "postId"]), // Prevent duplicates
+
+  // SEO metadata for posts
+  postSeo: defineTable({
+    postId: v.id("posts"),
+    metaDescription: v.optional(v.string()),
+    keywords: v.array(v.string()),
+    socialPreviewText: v.optional(v.string()),
+    readingTime: v.optional(v.number()), // in minutes
+    readabilityScore: v.optional(v.number()), // 0-100 scale
+    readabilityLevel: v.optional(v.string()), // "Easy", "Medium", "Hard"
+    generatedTitles: v.optional(v.array(v.string())), // AI-generated title alternatives
+    tableOfContents: v.optional(v.array(v.object({
+      id: v.string(),
+      text: v.string(),
+      level: v.number(), // h1=1, h2=2, h3=3
+    }))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_post", ["postId"]),
 });
